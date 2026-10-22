@@ -15,6 +15,7 @@ public class ClientHandler implements Runnable {
     private final Socket socket;
     private BufferedReader in;
     private PrintWriter out;
+
     private String username = "";
     private boolean readOnly = true;
 
@@ -33,7 +34,8 @@ public class ClientHandler implements Runnable {
                         )
                 );
                 PrintWriter writer = new PrintWriter(
-                        clientSocket.getOutputStream(), true,
+                        clientSocket.getOutputStream(),
+                        true,
                         StandardCharsets.UTF_8
                 )
         ) {
@@ -51,6 +53,7 @@ public class ClientHandler implements Runnable {
             TCPServerApp.registerClient(this, username, readOnly);
 
             String message;
+
             while ((message = in.readLine()) != null) {
                 message = message.trim();
 
@@ -58,18 +61,31 @@ public class ClientHandler implements Runnable {
                     continue;
                 }
 
+                // Allow the client to disconnect using any required command.
                 if (message.equalsIgnoreCase("bye")
-                        || message.equalsIgnoreCase("end")) {
+                        || message.equalsIgnoreCase("end")
+                        || message.equalsIgnoreCase("LEAVE")) {
+
+                    String time = LocalTime.now().format(
+                            DateTimeFormatter.ofPattern("HH:mm:ss")
+                    );
+
+                    TCPServerApp.broadcast(
+                            "[" + time + "]" + username + ": " + message
+                    );
+
                     break;
                 }
 
+                // Return the active user list to the requesting client.
                 if (message.equalsIgnoreCase("allUsers")) {
-                    out.println(TCPServerApp.getActiveUsers());
+                    sendMessage(TCPServerApp.getActiveUsers());
                     continue;
                 }
 
+                // Read-only clients can receive messages but cannot send them.
                 if (readOnly) {
-                    out.println("READ-ONLY MODE: You cannot send messages.");
+                    sendMessage("READ-ONLY MODE: You cannot send messages.");
                     continue;
                 }
 
@@ -83,7 +99,9 @@ public class ClientHandler implements Runnable {
             }
 
         } catch (IOException e) {
-            System.out.println("Client connection ended: " + e.getMessage());
+            System.out.println(
+                    "Client connection ended: " + e.getMessage()
+            );
         } finally {
             TCPServerApp.removeClient(this);
         }
@@ -91,6 +109,7 @@ public class ClientHandler implements Runnable {
 
     public void sendMessage(String message) {
         PrintWriter writer = out;
+
         if (writer != null) {
             writer.println(message);
         }

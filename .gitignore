@@ -1,0 +1,10 @@
+# Maven build output
+**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Operating system files
+.DS_Store
+Thumbs.db
